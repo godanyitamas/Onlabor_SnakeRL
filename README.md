@@ -9,7 +9,4 @@ Négyféle mozgást tud a kígyó végrehajtani:
 - minden meghívásnál az update_state() azt is ellenőrzi, hogy nem akar-e saját maga fele menni a kígyó,
   ilyenkor egy random akciót választ
 
-Neurháló:
-- Adam optimizer, lr = 0.001, mse
-- Hidden layers: 50, 100
-- Discount = 0.9
+
