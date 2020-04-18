@@ -25,7 +25,7 @@ class Snake(object):
         # State:
         self.state = np.asarray([f1, f2, h1, h2])
 
-    def observe(self):
+    def _observe(self):
         # (Draw_state included)
         img_size = (self.grid_size,) * 2
         state = self.state
@@ -38,6 +38,21 @@ class Snake(object):
         canvas[self.t1[0], self.t1[1]] = 1
         canvas[self.t2[0], self.t2[1]] = 1
         return canvas.reshape((1, -1))
+
+    def observe(self):
+        # (Draw_state included)
+        img_size = (self.grid_size,) * 2
+        state = self.state
+        # Fruit: - canvas at rand int coord
+        canvas = np.zeros(img_size)
+        canvas[state[0], state[1]] = 1
+        # Snake head: - canvas at rand int coord
+        canvas[state[2], state[3]] = 1
+        # Snake tail:
+        canvas[self.t1[0], self.t1[1]] = 1
+        canvas[self.t2[0], self.t2[1]] = 1
+        #print(self.state.reshape((1, -1)))
+        return self.state.reshape((1, -1))
 
     # Returns reshaped canvas
 
@@ -101,14 +116,15 @@ class Snake(object):
 
 
 class ExperienceReplay(object):
-    def __init__(self, max_memory=100, discount=.8):
+    def __init__(self, max_memory=100, discount=.95):
         self.max_memory = max_memory
         self.memory = list()
         self.discount = discount
 
     def remember(self, states, game_over):
         self.memory.append([states, game_over])
-        # print(np.shape(self.memory))
+        # print(np.shape(self.memory[0]))
+        # print(self.memory[0])
         if len(self.memory) > self.max_memory:
             del self.memory[0]
 
@@ -118,13 +134,19 @@ class ExperienceReplay(object):
         num_actions = model.output_shape[-1]
         # print("Number of actions: ", num_actions)
         env_dim = self.memory[0][0][0].shape[1]
-        inputs = np.zeros((min(len_memory, batch_size), env_dim))
+        inputs = np.zeros((4, env_dim))
+
         targets = np.zeros((inputs.shape[0], num_actions))
         for i, idx in enumerate(np.random.randint(0, len_memory,
                                                   size=inputs.shape[0])):
             state_t, action_t, reward_t, state_tp1 = self.memory[idx][0]
             game_over = self.memory[idx][1]
+            # print(i) = 0
+            # state_t is the new calculated state
+            # inputs[i: i+1] = inputs[0 : 1] = state_t
 
+            #print(state_t, np.shape (state_t), np.shape(inputs))
+            #print(inputs[i:i + 1])
             inputs[i:i + 1] = state_t
             # There should be no target values for actions not taken.
             # Thou shalt not correct actions not taken #deep
@@ -142,25 +164,25 @@ if __name__ == "__main__":
     # parameters
     # epsilon = .01  # exploration
     num_actions = 4
-    epoch = 500
+    epoch = 1000
     max_memory = 500
     hidden_size = 100
     batch_size = 50
     grid_size = 10
-
-    model = Sequential()
-    model.add(Dense(100, input_shape=(grid_size ** 2,), activation='relu'))
-    model.add(Dense(150, activation='relu'))
-    model.add(Dense(num_actions))
-    model.compile(sgd(lr=.1), "mse")
-
     # Define environment/game
     env = Snake(grid_size)
+
+    model = Sequential()
+    model.add(Dense(100, input_shape=(4,), activation='relu'))
+    model.add(Dense(100, activation='relu'))
+    model.add(Dense(num_actions))
+    model.compile(adam(lr=.00001), "mse")
+
     # Initialize experience replay object
     exp_replay = ExperienceReplay(max_memory=max_memory)
-
     win_cnt = 0
     loss_plot = []
+
     for e in range(epoch):
         loss = 0.
         env.reset()
